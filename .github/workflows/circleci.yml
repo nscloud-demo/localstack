@@ -185,6 +185,7 @@ jobs:
           make docker-build
       - name: Save docker image
         run: |
+          mkdir target
           PLATFORM="${{ matrix.platform }}" make docker-save-image
       - name: Load docker image
         run: |
