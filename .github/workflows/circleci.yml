@@ -52,7 +52,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: workspace-${{ runner.os }}
-          path: workspace/workspace.tar.gz
+          path: workspace.tar.gz
           retention-days: ${{ env.workspace_retention_days }}
 
   unit-tests:
