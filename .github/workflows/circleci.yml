@@ -21,6 +21,8 @@ jobs:
           path: workspace
       - name: Set up Python
         uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
       - name: Setup cross-invocation caching
         uses: actions/cache@v3
         with:
@@ -59,7 +61,7 @@ jobs:
     runs-on: nscloud
     needs: install-and-preflight
     steps:
-      - name: Download repo
+      - name: Download workspace
         uses: actions/download-artifact@v3
         with:
           name: workspace-${{ runner.os }}
