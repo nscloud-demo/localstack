@@ -6,8 +6,10 @@ on:
 
 env:
   workspace_retention_days: 1 # We don't need to persist it for long, only for all jobs to download it.
-  report_retention_days: 3
-  coverage_retention_days: 3
+
+  # TODO: extend duration once workflow is fully migrated
+  report_retention_days: 2
+  coverage_retention_days: 2
 
 jobs:
   install-and-preflight:
@@ -46,6 +48,7 @@ jobs:
       - name: Archive workspace
         working-directory: workspace
         run: |
+          ls -al
           tar -czf workspace.tar.gz *
       - name: Upload workspace
         uses: actions/upload-artifact@v3
@@ -73,6 +76,7 @@ jobs:
           PYTEST_ARGS: --junitxml=target/reports/unit-tests.xml -o junit_suite_name=unit-tests
           COVERAGE_ARGS: -p
         run: |
+          ls -al
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
@@ -81,12 +85,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: unit-tests-reports-${{ runner.os }}
-          path: target/reports
+          path: workspace/target/reports
           retention-days: ${{ env.report_retention_days }}
       - name: Upload test reports
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           name: unit-tests-coverage-${{ runner.os }}
-          path: .coverage.*
+          path: workspace/.coverage.*
           retention-days: ${{ env.coverage_retention_days }}
