@@ -10,7 +10,10 @@ env:
 
 jobs:
   unit-tests:
-    runs-on: nscloud
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, nscloud] # TODO: only run nscloud
+    runs-on: ${{ matrix.os }}
     steps:
       # install
       - name: Checkout
@@ -48,7 +51,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
-          name: results-${{ runner.os }}
+          name: results-${{ matrix.os }}
           path: |
             unit-tests.xml
             .coverage.*
