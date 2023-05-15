@@ -46,10 +46,8 @@ jobs:
         run: |
           make lint
       - name: Archive workspace
-        working-directory: workspace
         run: |
-          ls -al
-          tar -czf workspace.tar.gz *
+          tar -czf workspace.tar.gz workspace
       - name: Upload workspace
         uses: actions/upload-artifact@v3
         with:
@@ -67,8 +65,7 @@ jobs:
           name: workspace-${{ runner.os }}
       - name: Unpack workspace
         run: |
-          mkdir workspace
-          tar -C workspace -xzf workspace.tar.gz
+          tar -xzf workspace.tar.gz
       - name: Unit tests
         working-directory: workspace
         env:
@@ -76,7 +73,6 @@ jobs:
           PYTEST_ARGS: --junitxml=target/reports/unit-tests.xml -o junit_suite_name=unit-tests
           COVERAGE_ARGS: -p
         run: |
-          ls -al
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
