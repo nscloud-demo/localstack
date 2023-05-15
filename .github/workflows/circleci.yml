@@ -5,20 +5,16 @@ on:
   push:
 
 env:
-  workspace_retention_days: 1 # We don't need to persist it for long, only for all jobs to download it.
-
   # TODO: extend duration once workflow is fully migrated
-  report_retention_days: 2
-  coverage_retention_days: 2
+  result_retention_days: 2
 
 jobs:
-  install-and-preflight:
+  unit-tests:
     runs-on: nscloud
     steps:
+      # install
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          path: workspace
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -28,67 +24,125 @@ jobs:
         with:
           path: |
             ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ hashFiles('workspace/setup.cfg') }}
-      # Likely only needed in CircleCI.
-      # TODO verify!
-      # - name: Install prerequisites
-      #   run: |
-      #     # fix for: https://discuss.circleci.com/t/heroku-gpg-issues-in-ubuntu-images/43834/3
-      #     sudo rm -rf /etc/apt/sources.list.d/heroku.list
-      #     sudo apt-get update
-      #     sudo apt-get install -y libsasl2-dev
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
       - name: Setup environment
-        working-directory: workspace
         run: |
           make install
-          mkdir -p target/reports
-          mkdir -p target/coverage
+
+      # preflight
       - name: Linting
-        working-directory: workspace
         run: |
           make lint
-      - name: Archive workspace
-        run: |
-          tar -czf workspace.tar.gz workspace
-      - name: Upload workspace
-        uses: actions/upload-artifact@v3
-        with:
-          name: workspace-${{ runner.os }}
-          path: workspace.tar.gz
-          retention-days: ${{ env.workspace_retention_days }}
 
-  unit-tests:
-    runs-on: nscloud
-    needs: install-and-preflight
-    steps:
-      - name: Download workspace
-        uses: actions/download-artifact@v3
-        with:
-          name: workspace-${{ runner.os }}
-      - name: Unpack workspace
-        run: |
-          tar -xzf workspace.tar.gz
+      # unit-tests
       - name: Unit tests
-        working-directory: workspace
         env:
           TEST_PATH: tests/unit
-          PYTEST_ARGS: --junitxml=target/reports/unit-tests.xml -o junit_suite_name=unit-tests
+          PYTEST_ARGS: --junitxml=unit-tests.xml -o junit_suite_name=unit-tests
           COVERAGE_ARGS: -p
         run: |
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
-      - name: Upload test reports
+      - name: Upload test results
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
-          name: unit-tests-reports-${{ runner.os }}
-          path: workspace/target/reports
-          retention-days: ${{ env.report_retention_days }}
-      - name: Upload test reports
+          name: results-${{ runner.os }}
+          path: |
+            unit-tests.xml
+            .coverage.*
+          retention-days: ${{ env.result_retention_days }}
+
+  itest-lambda-legacy-local:
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # preflight
+      - name: Linting
+        run: |
+          make lint
+
+      # itest-lambda-legacy-local
+      - name: Test 'local' Lambda executor
+        env:
+          LAMBDA_EXECUTOR: local
+          PROVIDER_OVERRIDE_LAMBDA: legacy
+          TEST_PATH: tests/integration/awslambda/ tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
+          PYTEST_ARGS: --reruns 2 --junitxml=lambda-docker.xml -o junit_suite_name='legacy-lambda-local'
+          COVERAGE_ARGS: -p
+        run: |
+          make test-coverage
+      # Sadly actions/test-reporter does not support Python yet.
+      # Maybe there is a better alternative to `store_test_results`.
+      - name: Upload test results
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
-          name: unit-tests-coverage-${{ runner.os }}
-          path: workspace/.coverage.*
-          retention-days: ${{ env.coverage_retention_days }}
+          name: results-${{ runner.os }}
+          path: |
+            lambda-docker.xml
+            .coverage.*
+          retention-days: ${{ env.result_retention_days }}
+
+  itest-sfn-v2-provider:
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # preflight
+      - name: Linting
+        run: |
+          make lint
+
+      # itest-sfn-v2-provider
+      - name: Test SFN V2 provider
+        env:
+          PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
+          TEST_PATH: tests/integration/stepfunctions/v2/
+          PYTEST_ARGS: --reruns 3 --junitxml=sfn_v2.xml -o junit_suite_name='sfn_v2'
+          COVERAGE_ARGS: -p
+        run: |
+          make test-coverage
+      # Sadly actions/test-reporter does not support Python yet.
+      # Maybe there is a better alternative to `store_test_results`.
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: results-${{ runner.os }}
+          path: |
+            sfn_v2.xml
+            .coverage.*
+          retention-days: ${{ env.result_retention_days }}
