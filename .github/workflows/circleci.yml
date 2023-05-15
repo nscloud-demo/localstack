@@ -11,6 +11,7 @@ env:
 jobs:
   unit-tests:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-22.04, nscloud] # TODO: only run nscloud
     runs-on: ${{ matrix.os }}
@@ -149,3 +150,43 @@ jobs:
             sfn_v2.xml
             .coverage.*
           retention-days: ${{ env.result_retention_days }}
+
+  docker-build:
+    strategy:
+      matrix:
+        platform: [amd64, arm64]
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # preflight
+      - name: Linting
+        run: |
+          make lint
+
+      # docker-build
+      - name: Build community docker image
+        run: |
+          make docker-build
+      - name: Save docker image
+        run: |
+          PLATFORM="${{ matrix.platform }}" make docker-save-image
+      - name: Load docker image
+        run: |
+          docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
+      # TODO
