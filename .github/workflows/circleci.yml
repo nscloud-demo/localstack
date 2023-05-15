@@ -59,7 +59,11 @@ jobs:
           retention-days: ${{ env.result_retention_days }}
 
   itest-lambda-legacy-local:
-    runs-on: nscloud
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, nscloud] # TODO: only run nscloud
+    runs-on: ${{ matrix.os }}
     steps:
       # install
       - name: Checkout
@@ -106,7 +110,11 @@ jobs:
           retention-days: ${{ env.result_retention_days }}
 
   itest-sfn-v2-provider:
-    runs-on: nscloud
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, nscloud] # TODO: only run nscloud
+    runs-on: ${{ matrix.os }}
     steps:
       # install
       - name: Checkout
