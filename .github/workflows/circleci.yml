@@ -7,6 +7,7 @@ on:
 env:
   # TODO: extend duration once workflow is fully migrated
   result_retention_days: 2
+  NS_CLOUD_CI_RUNNER: true
 
 jobs:
   lint:
