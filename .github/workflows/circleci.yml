@@ -224,6 +224,7 @@ jobs:
   docker-test:
     needs: docker-build
     strategy:
+      fail-fast: false # While we debug, let's get data from both runs.
       matrix:
         platform: [amd64, arm64]
     runs-on: nscloud
