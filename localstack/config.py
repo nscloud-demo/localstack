@@ -1290,7 +1290,7 @@ SERVICE_PROVIDER_CONFIG.load_from_environment()
 
 
 def init_directories() -> Directories:
-    # TODO: Look into alternative options.
+    # TODO: Look into alternative options. NSL-1084
     if is_in_docker and not is_env_true("NS_CLOUD_CI_RUNNER"):
         return Directories.for_container()
     else:

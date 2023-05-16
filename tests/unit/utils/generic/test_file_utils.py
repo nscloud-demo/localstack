@@ -52,7 +52,8 @@ def test_parse_config_file(input_type, sections):
 
 @pytest.mark.parametrize("file_type", ["file", "dir"])
 @pytest.mark.skipif(
-    condition=not config.is_in_docker,
+    # TODO: Look into alternative options. NSL-1084
+    condition=not config.is_in_docker or config.is_env_true("NS_CLOUD_CI_RUNNER"),
     reason="requires `localstack` user switch, running only in Docker",
 )
 def test_idempotent_chmod(file_type):
