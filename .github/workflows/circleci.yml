@@ -363,3 +363,70 @@ jobs:
           name: implementation-coverage-${{ runner.os }}
           path: scripts
           retention-days: ${{ env.result_retention_days }}
+
+  report:
+    needs:
+      [
+        unit-tests,
+        itest-lambda-legacy-local,
+        itest-sfn-v2-provider,
+        docker-test,
+        capture-not-implemented,
+      ]
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # report
+      - name: Download image ref
+        uses: actions/download-artifact@v3
+        with:
+          name: results-${{ runner.os }}
+      - name: Collect coverage
+        run: |
+          source .venv/bin/activate
+          cd target/coverage
+          ls -la
+          coverage combine
+          mv .coverage ../../
+      - name: Report coverage statistics
+        run: |
+          source .venv/bin/activate
+          coverage report || true
+          coverage html || true
+          coveralls || true
+      - name: Upload test metrics and implemented coverage data to tinybird
+        env:
+          METRIC_REPORT_DIR_PATH: out/parity_metrics
+          IMPLEMENTATION_COVERAGE_FILE: scripts/implementation_coverage_full.csv
+          SOURCE_TYPE: community
+        run: |
+          source .venv/bin/activate
+          mkdir -p out/parity_metrics && mv target/metric_reports/metric-report-raw-data-*amd64*.csv out/parity_metrics
+          python -m scripts.tinybird.upload_raw_test_metrics_and_coverage
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: report-${{ runner.os }}
+          path: |
+            out
+            scripts/implementation_coverage_aggregated.csv
+            scripts/implementation_coverage_full.csv
+          retention-days: ${{ env.result_retention_days }}
+
+  # TODO: add push job
