@@ -58,20 +58,23 @@ jobs:
       - name: Unit tests
         env:
           TEST_PATH: tests/unit
-          PYTEST_ARGS: --junitxml=unit-tests.xml -o junit_suite_name=unit-tests
+          PYTEST_ARGS: --junitxml=out/target/reports/unit-tests.xml -o junit_suite_name=unit-tests
           COVERAGE_ARGS: -p
         run: |
+          mkdir -p out/target/reports
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
+      - name: Store coverage results
+        run: |
+          mkdir -p out/target/coverage
+          mv .coverage.* out/target/coverage/
       - name: Upload test results
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           name: results-${{ runner.os }}
-          path: |
-            unit-tests.xml
-            .coverage.*
+          path: out
           retention-days: ${{ env.result_retention_days }}
 
   itest-lambda-legacy-local:
@@ -104,21 +107,24 @@ jobs:
           LAMBDA_EXECUTOR: local
           PROVIDER_OVERRIDE_LAMBDA: legacy
           TEST_PATH: tests/integration/awslambda/ tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
-          PYTEST_ARGS: --reruns 2 --junitxml=lambda-docker.xml -o junit_suite_name='legacy-lambda-local'
+          PYTEST_ARGS: --reruns 2 --junitxml=out/target/reports/lambda-docker.xml -o junit_suite_name='legacy-lambda-local'
           COVERAGE_ARGS: -p
         run: |
+          mkdir -p out/target/reports
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
+      - name: Store coverage results
+        run: |
+          mkdir -p out/target/coverage
+          mv .coverage.* out/target/coverage/
       - name: Upload test results
         # TODO success() || failure()
         if: ${{ matrix.os }} == 'nscloud'
         uses: actions/upload-artifact@v3
         with:
           name: results-${{ runner.os }}
-          path: |
-            lambda-docker.xml
-            .coverage.*
+          path: out
           retention-days: ${{ env.result_retention_days }}
 
   itest-sfn-v2-provider:
@@ -146,20 +152,23 @@ jobs:
         env:
           PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
           TEST_PATH: tests/integration/stepfunctions/v2/
-          PYTEST_ARGS: --reruns 3 --junitxml=sfn_v2.xml -o junit_suite_name='sfn_v2'
+          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2'
           COVERAGE_ARGS: -p
         run: |
+          mkdir -p out/target/reports
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
+      - name: Store coverage results
+        run: |
+          mkdir -p out/target/coverage
+          mv .coverage.* out/target/coverage/
       - name: Upload test results
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           name: results-${{ runner.os }}
-          path: |
-            sfn_v2.xml
-            .coverage.*
+          path: out
           retention-days: ${{ env.result_retention_days }}
 
   docker-build:
@@ -196,4 +205,46 @@ jobs:
       - name: Load docker image
         run: |
           docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
-      # TODO
+
+      # AMD64 prep
+      - name: compute-src-hashes
+        if: ${{ matrix.platform }} == 'amd64'
+        run: |
+          find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > /tmp/common-functions-checksums
+      - name: Setup cross-invocation caching
+        if: ${{ matrix.platform }} == 'amd64'
+        uses: actions/cache@v3
+        with:
+          path: |
+            tests/integration/awslambda/functions/common
+          key: ${{ runner.os }}-common-functions-${{ hashFiles('/tmp/common-functions-checksums') }}
+      - name: pre-build lambda common test packages
+        if: ${{ matrix.platform }} == 'amd64'
+        run: |
+          ./scripts/build_common_test_functions.sh `pwd`/tests/integration/awslambda/functions/common
+
+      # CircleCI’s automatic test parallelism is not built into GitHub Actions.
+      # https://docs.github.com/en/actions/migrating-to-github-actions/manual-migrations/migrating-from-circleci-to-github-actions#key-differences
+      - name: Run integration tests
+        env:
+          PYTEST_ARGS: -o junit_family=legacy --junitxml=out/target/reports/test-report-${{ matrix.platform }}.xml
+          COVERAGE_FILE: .coverage.${{ matrix.platform }}
+          TEST_PATH: tests/integration/**/test_*.py
+          DEBUG: 1
+        run: |
+          mkdir -p out/target/reports
+          make docker-run-tests
+      # Sadly actions/test-reporter does not support Python yet.
+      # Maybe there is a better alternative to `store_test_results`.
+      - name: Store coverage results
+        run: |
+          mkdir -p out/target/coverage
+          mv .coverage.* out/target/coverage/
+          mv target/metric_reports out/target
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: results-${{ runner.os }}
+          path: out
+          retention-days: ${{ env.result_retention_days }}
