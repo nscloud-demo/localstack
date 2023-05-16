@@ -79,11 +79,7 @@ jobs:
           retention-days: ${{ env.result_retention_days }}
 
   itest-lambda-legacy-local:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-22.04, nscloud] # TODO: only run nscloud
-    runs-on: ${{ matrix.os }}
+    runs-on: nscloud
     steps:
       # install
       - name: Checkout
@@ -123,8 +119,7 @@ jobs:
           mkdir -p out/target/coverage
           mv .coverage.* out/target/coverage/
       - name: Upload test results
-        # TODO success() || failure()
-        if: ${{ matrix.os }} == 'nscloud'
+        if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           name: results-${{ runner.os }}
