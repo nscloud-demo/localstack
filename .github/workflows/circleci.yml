@@ -55,18 +55,11 @@ jobs:
         run: |
           make install
 
-      # Add support for parallel execution with `-n auto`
-      # Consider promoting to setup.cfg
-      - name: Prepare parallel execution
-        run: |
-          source .venv/bin/activate
-          pip install pytest-xdist
-
       # unit-tests
       - name: Unit tests
         env:
           TEST_PATH: tests/unit
-          PYTEST_ARGS: -n auto --junitxml=out/target/reports/unit-tests.xml -o junit_suite_name=unit-tests
+          PYTEST_ARGS: --junitxml=out/target/reports/unit-tests.xml -o junit_suite_name=unit-tests
           COVERAGE_ARGS: -p
         run: |
           mkdir -p out/target/reports
@@ -105,20 +98,13 @@ jobs:
         run: |
           make install
 
-      # Add support for parallel execution with `-n auto`
-      # Consider promoting to setup.cfg
-      - name: Prepare parallel execution
-        run: |
-          source .venv/bin/activate
-          pip install pytest-xdist
-
       # itest-lambda-legacy-local
       - name: Test 'local' Lambda executor
         env:
           LAMBDA_EXECUTOR: local
           PROVIDER_OVERRIDE_LAMBDA: legacy
           TEST_PATH: tests/integration/awslambda/ tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
-          PYTEST_ARGS: -n auto --reruns 2 --junitxml=out/target/reports/lambda-docker.xml -o junit_suite_name='legacy-lambda-local'
+          PYTEST_ARGS: --reruns 2 --junitxml=out/target/reports/lambda-docker.xml -o junit_suite_name='legacy-lambda-local'
           COVERAGE_ARGS: -p
 
           # TODO: Remove
@@ -160,19 +146,12 @@ jobs:
         run: |
           make install
 
-      # Add support for parallel execution with `-n auto`
-      # Consider promoting to setup.cfg
-      - name: Prepare parallel execution
-        run: |
-          source .venv/bin/activate
-          pip install pytest-xdist
-
       # itest-sfn-v2-provider
       - name: Test SFN V2 provider
         env:
           PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
           TEST_PATH: tests/integration/stepfunctions/v2/
-          PYTEST_ARGS: -n auto --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2'
+          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2'
           COVERAGE_ARGS: -p
         run: |
           mkdir -p out/target/reports
@@ -266,13 +245,6 @@ jobs:
         run: |
           make install
 
-      # Add support for parallel execution with `-n auto`
-      # Consider promoting to setup.cfg
-      - name: Prepare parallel execution
-        run: |
-          source .venv/bin/activate
-          pip install pytest-xdist
-
       - name: Download image ref
         uses: actions/download-artifact@v3
         with:
@@ -306,7 +278,7 @@ jobs:
       # https://docs.github.com/en/actions/migrating-to-github-actions/manual-migrations/migrating-from-circleci-to-github-actions#key-differences
       - name: Run integration tests
         env:
-          PYTEST_ARGS: -n auto -o junit_family=legacy --junitxml=out/target/reports/test-report-${{ matrix.platform }}.xml
+          PYTEST_ARGS: -o junit_family=legacy --junitxml=out/target/reports/test-report-${{ matrix.platform }}.xml
           COVERAGE_FILE: .coverage.${{ matrix.platform }}
           TEST_PATH: tests/integration/**/test_*.py
           DEBUG: 1
