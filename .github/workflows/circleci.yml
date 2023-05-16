@@ -55,6 +55,13 @@ jobs:
         run: |
           make install
 
+      # Add support for parallel execution with `-n auto`
+      # Consider promoting to setup.cfg
+      - name: Prepare parallel execution
+        run: |
+          source .venv/bin/activate
+          pip install pytest-xdist
+
       # unit-tests
       - name: Unit tests
         env:
@@ -63,10 +70,6 @@ jobs:
           COVERAGE_ARGS: -p
         run: |
           mkdir -p out/target/reports
-
-          # Add support for parallel execution with `-n auto`
-          pip install pytest-xdist
-
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
@@ -102,6 +105,13 @@ jobs:
         run: |
           make install
 
+      # Add support for parallel execution with `-n auto`
+      # Consider promoting to setup.cfg
+      - name: Prepare parallel execution
+        run: |
+          source .venv/bin/activate
+          pip install pytest-xdist
+
       # itest-lambda-legacy-local
       - name: Test 'local' Lambda executor
         env:
@@ -115,10 +125,6 @@ jobs:
           DEBUG: 1
         run: |
           mkdir -p out/target/reports
-
-          # Add support for parallel execution with `-n auto`
-          pip install pytest-xdist
-
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
@@ -154,6 +160,13 @@ jobs:
         run: |
           make install
 
+      # Add support for parallel execution with `-n auto`
+      # Consider promoting to setup.cfg
+      - name: Prepare parallel execution
+        run: |
+          source .venv/bin/activate
+          pip install pytest-xdist
+
       # itest-sfn-v2-provider
       - name: Test SFN V2 provider
         env:
@@ -163,10 +176,6 @@ jobs:
           COVERAGE_ARGS: -p
         run: |
           mkdir -p out/target/reports
-
-          # Add support for parallel execution with `-n auto`
-          pip install pytest-xdist
-
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
@@ -257,6 +266,13 @@ jobs:
         run: |
           make install
 
+      # Add support for parallel execution with `-n auto`
+      # Consider promoting to setup.cfg
+      - name: Prepare parallel execution
+        run: |
+          source .venv/bin/activate
+          pip install pytest-xdist
+
       - name: Download image ref
         uses: actions/download-artifact@v3
         with:
@@ -296,10 +312,6 @@ jobs:
           DEBUG: 1
         run: |
           mkdir -p out/target/reports
-
-          # Add support for parallel execution with `-n auto`
-          pip install pytest-xdist
-
           make docker-run-tests
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
