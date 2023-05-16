@@ -68,7 +68,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
-          name: results-${{ matrix.os }}
+          name: results-${{ runner.os }}
           path: |
             unit-tests.xml
             .coverage.*
