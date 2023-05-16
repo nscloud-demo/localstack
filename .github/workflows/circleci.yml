@@ -211,14 +211,15 @@ jobs:
           REGISTRY=`cat registry.txt`
           docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
           docker tag localstack/localstack:latest $REGISTRY/localstack/localstack
-          docker push $REGISTRY/localstack/localstack
+          docker push $REGISTRY/localstack/localstack | tee push-output.txt
 
-          docker images localstack/localstack:latest --format "{{.Digest}}" > ${{ matrix.platform }}-image-digest.txt
-      - name: Upload image digest
+          DIGEST=`docker images $REGISTRY/localstack/localstack --format "{{.Digest}}"`
+          echo "$REGISTRY/localstack/localstack@$DIGEST" | tee ${{ matrix.platform }}-image-ref.txt
+      - name: Upload image ref
         uses: actions/upload-artifact@v3
         with:
-          name: image-digest-${{ matrix.platform }}
-          path: ${{ matrix.platform }}-image-digest.txt
+          name: image-ref-${{ matrix.platform }}
+          path: ${{ matrix.platform }}-image-ref.txt
           # We just need the next job to pick it up.
           retention-days: 1
 
@@ -246,16 +247,16 @@ jobs:
         run: |
           make install
 
-      - name: Download image digest
+      - name: Download image ref
         uses: actions/download-artifact@v3
         with:
-          name: image-digest-${{ matrix.platform }}
+          name: image-ref-${{ matrix.platform }}
       - name: Load docker image
         run: |
-          nsc docker-login --output_registry_to=registry.txt
-          REGISTRY=`cat registry.txt`
-          DIGEST=`cat ${{ matrix.platform }}-image-digest.txt`
-          docker pull $REGISTRY/localstack/localstack@$DIGEST
+          nsc docker-login
+
+          REF=`cat ${{ matrix.platform }}-image-ref.txt`
+          docker pull $REF
 
       # AMD64 prep
       - name: compute-src-hashes
@@ -322,16 +323,16 @@ jobs:
           make install
 
       # capture-not-implemented
-      - name: Download image
+      - name: Download image ref
         uses: actions/download-artifact@v3
         with:
-          name: image-digest-amd64
+          name: image-ref-amd64
       - name: Load docker image
         run: |
-          nsc docker-login --output_registry_to=registry.txt
-          REGISTRY=`cat registry.txt`
-          DIGEST=`cat amd64-image-digest.txt`
-          docker pull $REGISTRY/localstack/localstack@$DIGEST
+          nsc docker-login
+
+          REF=`cat amd64-image-ref.txt`
+          docker pull $REF
 
       - name: Run localstack
         env:
