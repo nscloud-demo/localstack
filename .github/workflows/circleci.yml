@@ -214,7 +214,7 @@ jobs:
           docker push $REGISTRY/localstack/localstack
 
           docker images localstack/localstack:latest --format "{{.Digest}}" > ${{ matrix.platform }}-image-digest.txt
-      - name: Upload test results
+      - name: Upload image digest
         uses: actions/upload-artifact@v3
         with:
           name: image-digest-${{ matrix.platform }}
@@ -246,7 +246,7 @@ jobs:
         run: |
           make install
 
-      - name: Download image
+      - name: Download image digest
         uses: actions/download-artifact@v3
         with:
           name: image-digest-${{ matrix.platform }}
