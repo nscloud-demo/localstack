@@ -202,24 +202,61 @@ jobs:
         run: |
           mkdir target
           PLATFORM="${{ matrix.platform }}" make docker-save-image
+
+      - name: Upload image
+        uses: actions/upload-artifact@v3
+        with:
+          name: image-${{ runner.os }}-${{ matrix.platform }}
+          path: target/localstack-docker-image-${{ matrix.platform }}.tar
+          retention-days: ${{ env.result_retention_days }}
+
+  docker-test:
+    needs: docker-build
+    strategy:
+      matrix:
+        platform: [amd64, arm64]
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: image-${{ runner.os }}-${{ matrix.platform }}
+          path: target
       - name: Load docker image
         run: |
           docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
 
       # AMD64 prep
       - name: compute-src-hashes
-        if: ${{ matrix.platform }} == 'amd64'
+        if: ${{ matrix.platform == 'amd64' }}
         run: |
           find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > /tmp/common-functions-checksums
       - name: Setup cross-invocation caching
-        if: ${{ matrix.platform }} == 'amd64'
+        if: ${{ matrix.platform == 'amd64' }}
         uses: actions/cache@v3
         with:
           path: |
             tests/integration/awslambda/functions/common
           key: ${{ runner.os }}-common-functions-${{ hashFiles('/tmp/common-functions-checksums') }}
       - name: pre-build lambda common test packages
-        if: ${{ matrix.platform }} == 'amd64'
+        if: ${{ matrix.platform == 'amd64' }}
         run: |
           ./scripts/build_common_test_functions.sh `pwd`/tests/integration/awslambda/functions/common
 
@@ -247,4 +284,62 @@ jobs:
         with:
           name: results-${{ runner.os }}
           path: out
+          retention-days: ${{ env.result_retention_days }}
+
+  capture-not-implemented:
+    needs: docker-build
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # capture-not-implemented
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: image-${{ runner.os }}-amd64
+          path: target
+      - name: Load docker image
+        run: |
+          docker load -i target/localstack-docker-image-amd64.tar
+      - name: Run localstack
+        env:
+          DEBUG: 1
+          DISABLE_EVENTS: 1
+          IMAGE_NAME: localstack/localstack:latest
+        run: |
+          bin/localstack start -d
+          bin/localstack wait -t 120 || (bin/localstack logs && false)
+      - name: Run capture-not-implemented
+        run: |
+          source .venv/bin/activate
+          cd scripts
+          python -m capture_notimplemented_responses
+      - name: Print the logs
+        run: |
+          source .venv/bin/activate
+          localstack logs
+      - name: Stop localstack
+        run: |
+          source .venv/bin/activate
+          localstack stop
+      - name: Upload capture results
+        uses: actions/upload-artifact@v3
+        with:
+          name: implementation-coverage-${{ runner.os }}
+          path: scripts
           retention-days: ${{ env.result_retention_days }}
