@@ -1,3 +1,4 @@
+# Based on .circleci/config.yml
 name: CircleCI Port
 
 on:
@@ -172,10 +173,10 @@ jobs:
           retention-days: ${{ env.result_retention_days }}
 
   docker-build:
+    runs-on: nscloud
     strategy:
       matrix:
         platform: [amd64, arm64]
-    runs-on: nscloud
     steps:
       # install
       - name: Checkout
@@ -203,12 +204,23 @@ jobs:
           mkdir target
           PLATFORM="${{ matrix.platform }}" make docker-save-image
 
-      - name: Upload image
+      - name: Push image to private Docker registry
+        id: push
+        run: |
+          nsc docker-login --output_registry_to=registry.txt
+          REGISTRY=`cat registry.txt`
+          docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
+          docker tag localstack/localstack:latest $REGISTRY/localstack/localstack
+          docker push $REGISTRY/localstack/localstack
+
+          docker images localstack/localstack:latest --format "{{.Digest}}" > ${{ matrix.platform }}-image-digest.txt
+      - name: Upload test results
         uses: actions/upload-artifact@v3
         with:
-          name: image-${{ runner.os }}-${{ matrix.platform }}
-          path: target/localstack-docker-image-${{ matrix.platform }}.tar
-          retention-days: ${{ env.result_retention_days }}
+          name: image-digest-${{ matrix.platform }}
+          path: ${{ matrix.platform }}-image-digest.txt
+          # We just need the next job to pick it up.
+          retention-days: 1
 
   docker-test:
     needs: docker-build
@@ -237,11 +249,13 @@ jobs:
       - name: Download image
         uses: actions/download-artifact@v3
         with:
-          name: image-${{ runner.os }}-${{ matrix.platform }}
-          path: target
+          name: image-digest-${{ matrix.platform }}
       - name: Load docker image
         run: |
-          docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
+          nsc docker-login --output_registry_to=registry.txt
+          REGISTRY=`cat registry.txt`
+          DIGEST=`cat ${{ matrix.platform }}-image-digest.txt`
+          docker pull $REGISTRY/localstack/localstack@$DIGEST
 
       # AMD64 prep
       - name: compute-src-hashes
@@ -311,11 +325,14 @@ jobs:
       - name: Download image
         uses: actions/download-artifact@v3
         with:
-          name: image-${{ runner.os }}-amd64
-          path: target
+          name: image-digest-amd64
       - name: Load docker image
         run: |
-          docker load -i target/localstack-docker-image-amd64.tar
+          nsc docker-login --output_registry_to=registry.txt
+          REGISTRY=`cat registry.txt`
+          DIGEST=`cat amd64-image-digest.txt`
+          docker pull $REGISTRY/localstack/localstack@$DIGEST
+
       - name: Run localstack
         env:
           DEBUG: 1
