@@ -257,6 +257,7 @@ jobs:
 
           REF=`cat ${{ matrix.platform }}-image-ref.txt`
           docker pull $REF
+          docker tag $REF localstack/localstack:latest
 
       # AMD64 prep
       - name: compute-src-hashes
@@ -333,6 +334,7 @@ jobs:
 
           REF=`cat amd64-image-ref.txt`
           docker pull $REF
+          docker tag $REF localstack/localstack:latest
 
       - name: Run localstack
         env:
