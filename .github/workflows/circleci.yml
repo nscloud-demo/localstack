@@ -110,6 +110,9 @@ jobs:
           TEST_PATH: tests/integration/awslambda/ tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
           PYTEST_ARGS: --reruns 2 --junitxml=out/target/reports/lambda-docker.xml -o junit_suite_name='legacy-lambda-local'
           COVERAGE_ARGS: -p
+
+          # TODO: Remove
+          DEBUG: 1
         run: |
           mkdir -p out/target/reports
           make test-coverage
