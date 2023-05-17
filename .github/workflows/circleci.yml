@@ -237,7 +237,8 @@ jobs:
           ls -al tests/integration
 
           TEST_PATHS="['tests/integration/aws/**/test_*.py', 'tests/integration/s3/**/test_*.py']"
-          echo ::set-output name=test_paths::${TEST_PATHS}
+          echo "test_paths=$TEST_PATHS" >> $GITHUB_OUTPUT
+          echo "computed test paths $TEST_PATHS"
 
   docker-test:
     needs: [docker-build, split-tests]
