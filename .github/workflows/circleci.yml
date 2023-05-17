@@ -223,11 +223,29 @@ jobs:
           # We just need the next job to pick it up.
           retention-days: 1
 
+  split-tests:
+    runs-on: nscloud
+    outputs:
+      test_paths: ${{ steps.compute-paths.outputs.test_paths }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Split tests
+        id: compute-paths
+        run: |
+          # TODO split tests/integration/**/test_*.py
+          ls -al tests/integration
+
+          TEST_PATHS="['tests/integration/aws/**/test_*.py', 'tests/integration/s3/**/test_*.py']"
+          echo ::set-output name=test_paths::${TEST_PATHS}
+
   docker-test:
-    needs: docker-build
+    needs: [docker-build, split-tests]
     strategy:
       matrix:
         platform: [amd64] # TODO add arm64 when we have such runners.
+
+        test_path: ${{fromJson(needs.split-tests.outputs.test_paths)}}
     runs-on: nscloud-${{ matrix.platform }}
     steps:
       # install
@@ -282,7 +300,7 @@ jobs:
         env:
           PYTEST_ARGS: -o junit_family=legacy --junitxml=out/target/reports/test-report-${{ matrix.platform }}.xml
           COVERAGE_FILE: .coverage.${{ matrix.platform }}
-          TEST_PATH: tests/integration/**/test_*.py
+          TEST_PATH: ${{ matrix.test_path }}
           DEBUG: 1
         run: |
           mkdir -p out/target/reports
