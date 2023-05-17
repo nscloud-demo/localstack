@@ -284,7 +284,7 @@ jobs:
           DEBUG: 1
         run: |
           mkdir -p out/target/reports
-          make docker-run-tests
+          make docker-run-tests | tee out/test-results-${{ matrix.platform }}.txt
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
       - name: Store coverage results
