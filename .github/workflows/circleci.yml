@@ -233,10 +233,16 @@ jobs:
       - name: Split tests
         id: compute-paths
         run: |
-          # TODO split tests/integration/**/test_*.py
-          ls -al tests/integration
+          ls tests/integration/**/test_*.py > tests.txt
+          LINES=`cat tests.txt | wc -l`
+          split -l $((LINES / 4 + 1)) tests.txt
 
-          TEST_PATHS="['tests/integration/aws/**/test_*.py', 'tests/integration/s3/**/test_*.py']"
+          PARAM1=`cat xaa | tr '\n' ' '`
+          PARAM2=`cat xab | tr '\n' ' '`
+          PARAM3=`cat xac | tr '\n' ' '`
+          PARAM4=`cat xad | tr '\n' ' '`
+
+          TEST_PATHS="['$PARAM1', '$PARAM2', '$PARAM3', '$PARAM4']"
           echo "test_paths=$TEST_PATHS" >> $GITHUB_OUTPUT
           echo "computed test paths $TEST_PATHS"
 
@@ -299,13 +305,13 @@ jobs:
       # https://docs.github.com/en/actions/migrating-to-github-actions/manual-migrations/migrating-from-circleci-to-github-actions#key-differences
       - name: Run integration tests
         env:
-          PYTEST_ARGS: -o junit_family=legacy --junitxml=out/target/reports/test-report-${{ matrix.platform }}.xml
-          COVERAGE_FILE: .coverage.${{ matrix.platform }}
+          PYTEST_ARGS: -o junit_family=legacy --junitxml=out/target/reports/test-report-${{ matrix.platform }}-${{ runner.name }}.xml
+          COVERAGE_FILE: .coverage.${{ matrix.platform }}.${{ runner.name }}
           TEST_PATH: ${{ matrix.test_path }}
           DEBUG: 1
         run: |
           mkdir -p out/target/reports
-          make docker-run-tests | tee out/test-results-${{ matrix.platform }}.txt
+          make docker-run-tests | tee out/test-results-${{ matrix.platform }}-${{ runner.name }}.txt
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
       - name: Store coverage results
