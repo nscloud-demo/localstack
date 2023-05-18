@@ -233,7 +233,12 @@ jobs:
       - name: Split tests
         id: compute-paths
         run: |
+          ls tests/integration/**/test_*.py
+  
           ls tests/integration/**/test_*.py > tests.txt
+
+          cat tests.txt
+
           LINES=`cat tests.txt | wc -l`
           echo "found $LINES tests"
 
