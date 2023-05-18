@@ -318,7 +318,8 @@ jobs:
       # Maybe there is a better alternative to `store_test_results`.
       - name: Store coverage results
         run: |
-          mv target/metric_reports out/target
+          ls -al target
+          cp target/metric_reports out/target
       - name: Upload test results
         if: success() || failure()
         uses: actions/upload-artifact@v3
