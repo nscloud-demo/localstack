@@ -235,16 +235,29 @@ jobs:
         run: |
           ls tests/integration/**/test_*.py > tests.txt
           LINES=`cat tests.txt | wc -l`
-          split -l $((LINES / 4 + 1)) tests.txt
+          echo "found $LINES tests"
 
-          PARAM1=`cat xaa | tr '\n' ' '`
-          PARAM2=`cat xab | tr '\n' ' '`
-          PARAM3=`cat xac | tr '\n' ' '`
-          PARAM4=`cat xad | tr '\n' ' '`
+          split -l $((LINES / 4 + 1)) tests.txt split_group_
 
-          TEST_PATHS="['$PARAM1', '$PARAM2', '$PARAM3', '$PARAM4']"
-          echo "test_paths=$TEST_PATHS" >> $GITHUB_OUTPUT
-          echo "computed test paths $TEST_PATHS"
+          ls -al
+
+          echo -n "test_paths=[" >> $GITHUB_OUTPUT
+
+          COUNTER=0
+          for f in split_group_*
+          do
+            if [[ $COUNTER -ge 1 ]]; then
+              echo -n ", " >> $GITHUB_OUTPUT
+            fi
+
+            GROUP=`cat "$f" | tr '\n' ' '`
+            echo -n "'$GROUP'" >> $GITHUB_OUTPUT
+            echo "current test group is $GROUP"
+
+            COUNTER=$((COUNTER+1))
+          done
+
+          echo "]" >> $GITHUB_OUTPUT
 
   docker-test:
     needs: [docker-build, split-tests]
@@ -289,6 +302,9 @@ jobs:
         if: ${{ matrix.platform == 'amd64' }}
         run: |
           find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > /tmp/common-functions-checksums
+
+          ls /tmp
+          cat /tmp/common-functions-checksums
       - name: Setup cross-invocation caching
         if: ${{ matrix.platform == 'amd64' }}
         uses: actions/cache@v3
