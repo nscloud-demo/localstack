@@ -306,18 +306,18 @@ jobs:
       - name: Run integration tests
         env:
           PYTEST_ARGS: -o junit_family=legacy --junitxml=out/target/reports/test-report-${{ matrix.platform }}-${{ runner.name }}.xml
-          COVERAGE_FILE: .coverage.${{ matrix.platform }}.${{ runner.name }}
+          COVERAGE_FILE: out/target/coverage/.coverage.${{ matrix.platform }}.${{ runner.name }}
           TEST_PATH: ${{ matrix.test_path }}
           DEBUG: 1
         run: |
           mkdir -p out/target/reports
+          mkdir -p out/target/coverage
+
           make docker-run-tests | tee out/test-results-${{ matrix.platform }}-${{ runner.name }}.txt
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
       - name: Store coverage results
         run: |
-          mkdir -p out/target/coverage
-          mv .coverage.* out/target/coverage/
           mv target/metric_reports out/target
       - name: Upload test results
         if: success() || failure()
