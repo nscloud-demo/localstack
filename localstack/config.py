@@ -253,9 +253,6 @@ def in_docker():
     Returns True if running in a docker container, else False
     Ref. https://docs.docker.com/config/containers/runmetrics/#control-groups
     """
-    if is_env_true("NS_CLOUD_CI_RUNNER"):
-        return False
-
     if OVERRIDE_IN_DOCKER:
         return True
 
@@ -1293,7 +1290,7 @@ SERVICE_PROVIDER_CONFIG.load_from_environment()
 
 
 def init_directories() -> Directories:
-    if is_in_docker:
+    if is_in_docker and not is_env_true("NS_CLOUD_CI_RUNNER"):
         return Directories.for_container()
     else:
         if is_env_true("LOCALSTACK_CLI"):

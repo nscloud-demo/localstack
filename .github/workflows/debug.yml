@@ -31,10 +31,10 @@ jobs:
         run: |
           make install
 
-      - name: add profiler
+      - name: add tools
         run: |
           source .venv/bin/activate
-          pip install pytest-profiling yappi
+          pip install pytest-profiling yappi pyinstrument
 
       # itest-sfn-v2-provider
       - name: Test SFN V2 provider
