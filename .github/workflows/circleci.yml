@@ -9,6 +9,8 @@ env:
   # TODO: extend duration once workflow is fully migrated
   result_retention_days: 2
   NS_CLOUD_CI_RUNNER: true
+  lambda_legacy_test_groups: 3
+  sfn_v2_provider_test_groups: 3
   docker_test_groups: 4
 
 jobs:
@@ -79,7 +81,22 @@ jobs:
           path: out
           retention-days: ${{ env.result_retention_days }}
 
+  split-lambda-legacy-tests:
+    runs-on: nscloud
+    outputs:
+      test_paths: ${{ steps.compute-paths.outputs.test_paths }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Split tests
+        id: compute-paths
+        run: ./.github/workflows/scripts/split-tests.sh ${{ env.lambda_legacy_test_groups }} tests/integration/awslambda/**/test_*.py tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
+
   itest-lambda-legacy-local:
+    needs: split-lambda-legacy-tests
+    strategy:
+      matrix:
+        test_path: ${{fromJson(needs.split-lambda-legacy-tests.outputs.test_paths)}}
     runs-on: nscloud
     steps:
       # install
@@ -127,7 +144,22 @@ jobs:
           path: out
           retention-days: ${{ env.result_retention_days }}
 
+  split-sfn-v2-provider-tests:
+    runs-on: nscloud
+    outputs:
+      test_paths: ${{ steps.compute-paths.outputs.test_paths }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Split tests
+        id: compute-paths
+        run: ./.github/workflows/scripts/split-tests.sh ${{ env.sfn_v2_provider_test_groups }} tests/integration/stepfunctions/v2/**/test_*.py
+
   itest-sfn-v2-provider:
+    needs: split-sfn-v2-provider-tests
+    strategy:
+      matrix:
+        test_path: ${{fromJson(needs.split-sfn-v2-provider-tests.outputs.test_paths)}}
     runs-on: nscloud
     steps:
       # install
@@ -151,7 +183,7 @@ jobs:
       - name: Test SFN V2 provider
         env:
           PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
-          TEST_PATH: tests/integration/stepfunctions/v2/
+          TEST_PATH: ${{ matrix.test_path }}
           PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2'
           COVERAGE_ARGS: -p
         run: |
@@ -224,7 +256,7 @@ jobs:
           # We just need the next job to pick it up.
           retention-days: 1
 
-  split-tests:
+  split-docker-tests:
     runs-on: nscloud
     outputs:
       test_paths: ${{ steps.compute-paths.outputs.test_paths }}
@@ -233,46 +265,14 @@ jobs:
         uses: actions/checkout@v3
       - name: Split tests
         id: compute-paths
-        run: |
-          shopt -s globstar
-
-          COUNTER=0
-          for f in tests/integration/**/test_*.py
-          do
-            if [[ $COUNTER -ge ${{ env.docker_test_groups }} ]]; then
-              COUNTER=0
-            fi
-
-            echo "$f" >> "split_group_$COUNTER"
-
-            COUNTER=$((COUNTER+1))
-          done
-
-          echo -n "test_paths=[" >> $GITHUB_OUTPUT
-
-          COUNTER=0
-          for f in split_group_*
-          do
-            if [[ $COUNTER -ge 1 ]]; then
-              echo -n ", " >> $GITHUB_OUTPUT
-            fi
-
-            GROUP=`cat "$f" | tr '\n' ' '`
-            echo -n "'$GROUP'" >> $GITHUB_OUTPUT
-            echo "test group $COUNTER is $GROUP"
-
-            COUNTER=$((COUNTER+1))
-          done
-
-          echo "]" >> $GITHUB_OUTPUT
+        run: ./.github/workflows/scripts/split-tests.sh ${{ env.docker_test_groups }} tests/integration/**/test_*.py
 
   docker-test:
-    needs: [docker-build, split-tests]
+    needs: [docker-build, split-docker-tests]
     strategy:
       matrix:
         platform: [amd64, arm64]
-
-        test_path: ${{fromJson(needs.split-tests.outputs.test_paths)}}
+        test_path: ${{fromJson(needs.split-docker-tests.outputs.test_paths)}}
     runs-on: nscloud-${{ matrix.platform }}
     steps:
       # install
