@@ -10,6 +10,8 @@ import os
 import threading
 
 import pytest
+import yappi
+
 
 from localstack import config
 from localstack.config import is_env_true
@@ -39,6 +41,7 @@ if config.is_collect_metrics_mode():
 
 @pytest.hookimpl()
 def pytest_configure(config):
+    yappi.start()
     # first pytest lifecycle hook
     _start_monitor()
 
@@ -85,6 +88,14 @@ def pytest_unconfigure(config):
     # wait for localstack to stop. We do not want to exit immediately, otherwise new threads during shutdown will fail
     if not localstack_stopped.wait(timeout=10):
         logger.warning("LocalStack did not exit in time!")
+
+    yappi.stop()
+    threads = yappi.get_thread_stats()
+    for thread in threads:
+        print(
+            "Function stats for (%s) (%d)" % (thread.name, thread.id)
+        )  # it is the Thread.__class__.__name__
+        yappi.get_func_stats(ctx_id=thread.id).print_all()
 
 
 def _start_monitor():

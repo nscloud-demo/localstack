@@ -34,7 +34,7 @@ jobs:
       - name: add profiler
         run: |
           source .venv/bin/activate
-          pip install pytest-profiling
+          pip install pytest-profiling yappi
 
       # itest-sfn-v2-provider
       - name: Test SFN V2 provider
