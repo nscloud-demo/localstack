@@ -301,25 +301,19 @@ jobs:
 
       # AMD64 prep
       - name: compute-src-hashes
-        id: compute-src-hashes
         if: ${{ matrix.platform == 'amd64' }}
         run: |
-          find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > ${{ runner.temp }}/common-functions-checksums
-
-          echo "checksums-path=${{ runner.temp }}/common-functions-checksums" >> $GITHUB_OUTPUT
-          ls ${{ runner.temp }}
+          find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > ./common-functions-checksums
       - name: Setup cross-invocation caching
         if: ${{ matrix.platform == 'amd64' }}
         uses: actions/cache@v3
         with:
           path: |
             tests/integration/awslambda/functions/common
-          key: ${{ runner.os }}-common-functions-${{ hashFiles(steps.compute-src-hashes.outputs.checksums-path) }}
+          key: ${{ runner.os }}-common-functions-${{ hashFiles('./common-functions-checksums') }} # hashFiles can only access files in the workspace
       - name: pre-build lambda common test packages
         if: ${{ matrix.platform == 'amd64' }}
         run: |
-          ls ${{ runner.temp }}
-
           ./scripts/build_common_test_functions.sh `pwd`/tests/integration/awslambda/functions/common
 
       # CircleCI’s automatic test parallelism is not built into GitHub Actions.
