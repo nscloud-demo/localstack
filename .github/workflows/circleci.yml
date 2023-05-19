@@ -11,7 +11,7 @@ env:
   NS_CLOUD_CI_RUNNER: true
   lambda_legacy_test_groups: 3
   sfn_v2_provider_test_groups: 3
-  docker_test_groups: 4
+  docker_test_groups: 6
 
 jobs:
   lint:
@@ -121,7 +121,7 @@ jobs:
         env:
           LAMBDA_EXECUTOR: local
           PROVIDER_OVERRIDE_LAMBDA: legacy
-          TEST_PATH: tests/integration/awslambda/ tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
+          TEST_PATH: ${{ matrix.test_path }}
           PYTEST_ARGS: --reruns 2 --junitxml=out/target/reports/lambda-docker.xml -o junit_suite_name='legacy-lambda-local'
           COVERAGE_ARGS: -p
 
@@ -308,7 +308,7 @@ jobs:
       - name: compute-src-hashes
         if: ${{ matrix.platform == 'amd64' }}
         run: |
-          find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > ./common-functions-checksums
+          find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | sort | xargs sha256sum > ./common-functions-checksums
 
           cat ./common-functions-checksums
       - name: Setup cross-invocation caching
