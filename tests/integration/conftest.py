@@ -41,7 +41,6 @@ if config.is_collect_metrics_mode():
 
 @pytest.hookimpl()
 def pytest_configure(config):
-    yappi.start()
     # first pytest lifecycle hook
     _start_monitor()
 
@@ -89,13 +88,6 @@ def pytest_unconfigure(config):
     if not localstack_stopped.wait(timeout=10):
         logger.warning("LocalStack did not exit in time!")
 
-    yappi.stop()
-    threads = yappi.get_thread_stats()
-    for thread in threads:
-        print(
-            "Function stats for (%s) (%d)" % (thread.name, thread.id)
-        )  # it is the Thread.__class__.__name__
-        yappi.get_func_stats(ctx_id=thread.id).print_all()
 
 
 def _start_monitor():
@@ -141,11 +133,21 @@ def run_localstack():
     config.FORCE_SHUTDOWN = False
     config.EDGE_BIND_HOST = "0.0.0.0"
 
+    yappi.start()
+    
     def watchdog():
         logger.info("waiting stop event")
         localstack_stop.wait()  # triggered by _trigger_stop()
         logger.info("stopping infra")
         infra.stop_infra()
+
+        yappi.stop()
+        threads = yappi.get_thread_stats()
+        for thread in threads:
+            print(
+                "Function stats for (%s) (%d)" % (thread.name, thread.id)
+            )  # it is the Thread.__class__.__name__
+            yappi.get_func_stats(ctx_id=thread.id).print_all()
 
     monitor = threading.Thread(target=watchdog)
     monitor.start()
