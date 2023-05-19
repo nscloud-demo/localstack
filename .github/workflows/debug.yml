@@ -20,13 +20,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10.10" # Do not use tool cache.
-      # - name: Setup cross-invocation caching
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: |
-      #       ~/.cache/pip
-      #     key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
       - name: Setup environment
         run: |
           make install
