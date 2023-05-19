@@ -309,6 +309,8 @@ jobs:
         if: ${{ matrix.platform == 'amd64' }}
         run: |
           find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > ./common-functions-checksums
+
+          cat ./common-functions-checksums
       - name: Setup cross-invocation caching
         if: ${{ matrix.platform == 'amd64' }}
         uses: actions/cache@v3
