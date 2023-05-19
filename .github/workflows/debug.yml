@@ -41,8 +41,10 @@ jobs:
         env:
           PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
           TEST_PATH: tests/integration/stepfunctions/v2/choice_operators/test_numeric.py
-          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2' --profile --element-number 100
+          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2' --profile
           COVERAGE_ARGS: -p
         run: |
           mkdir -p out/target/reports
           make test-coverage
+
+          cat /home/runner/_work/localstack/localstack/prof/combined.prof
