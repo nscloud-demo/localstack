@@ -9,6 +9,7 @@ env:
   # TODO: extend duration once workflow is fully migrated
   result_retention_days: 2
   NS_CLOUD_CI_RUNNER: true
+  docker_test_groups: 6
 
 jobs:
   lint:
@@ -235,16 +236,12 @@ jobs:
         run: |
           shopt -s globstar
 
-          ls tests/integration/**/test_*.py
-
           ls tests/integration/**/test_*.py > tests.txt
-
-          cat tests.txt
 
           LINES=`cat tests.txt | wc -l`
           echo "found $LINES tests"
 
-          split -l $((LINES / 4 + 1)) tests.txt split_group_
+          split -l $((LINES / ${{ env.docker_test_groups }} + 1)) tests.txt split_group_
 
           ls -al
 
@@ -259,7 +256,7 @@ jobs:
 
             GROUP=`cat "$f" | tr '\n' ' '`
             echo -n "'$GROUP'" >> $GITHUB_OUTPUT
-            echo "current test group is $GROUP"
+            echo "test group $COUNTER is $GROUP"
 
             COUNTER=$((COUNTER+1))
           done
@@ -306,19 +303,19 @@ jobs:
 
       # AMD64 prep
       - name: compute-src-hashes
+        id: compute-src-hashes
         if: ${{ matrix.platform == 'amd64' }}
         run: |
-          find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > /tmp/common-functions-checksums
+          find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | xargs sha256sum > ${{ runner.temp }}/common-functions-checksums
 
-          ls /tmp
-          cat /tmp/common-functions-checksums
+          echo "checksums-path=${{ runner.temp }}/common-functions-checksums" >> $GITHUB_OUTPUT
       - name: Setup cross-invocation caching
         if: ${{ matrix.platform == 'amd64' }}
         uses: actions/cache@v3
         with:
           path: |
             tests/integration/awslambda/functions/common
-          key: ${{ runner.os }}-common-functions-${{ hashFiles('/tmp/common-functions-checksums') }}
+          key: ${{ runner.os }}-common-functions-${{ hashFiles(steps.compute-src-hashes.outputs.checksums-path) }}
       - name: pre-build lambda common test packages
         if: ${{ matrix.platform == 'amd64' }}
         run: |
