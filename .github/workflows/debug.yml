@@ -1,0 +1,48 @@
+name: Debug
+
+on:
+  workflow_dispatch:
+  push:
+
+env:
+  # TODO: extend duration once workflow is fully migrated
+  result_retention_days: 2
+  NS_CLOUD_CI_RUNNER: true
+  docker_test_groups: 6
+
+jobs:
+  itest-sfn-v2-provider:
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      - name: add profiler
+        run: |
+          source .venv/bin/activate
+          pip install pytest-profiling
+
+      # itest-sfn-v2-provider
+      - name: Test SFN V2 provider
+        env:
+          PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
+          TEST_PATH: tests/integration/stepfunctions/v2/choice_operators/test_numeric.py
+          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2' --profile
+          COVERAGE_ARGS: -p
+        run: |
+          mkdir -p out/target/reports
+          make test-coverage
