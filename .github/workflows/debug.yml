@@ -41,7 +41,7 @@ jobs:
         env:
           PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
           TEST_PATH: tests/integration/stepfunctions/v2/choice_operators/test_numeric.py
-          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2' --profile
+          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2' --profile --profile-svg
           COVERAGE_ARGS: -p
         run: |
           mkdir -p out/target/reports
@@ -51,5 +51,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: profile
-          path: /home/runner/_work/localstack/localstack/prof/combined.prof
+          path: /home/runner/_work/localstack/localstack/prof/
           retention-days: ${{ env.result_retention_days }}
