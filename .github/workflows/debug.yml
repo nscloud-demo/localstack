@@ -34,22 +34,24 @@ jobs:
       - name: add tools
         run: |
           source .venv/bin/activate
-          pip install pytest-profiling yappi pyinstrument
+          pip install pyinstrument
 
       # itest-sfn-v2-provider
       - name: Test SFN V2 provider
         env:
           PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
           TEST_PATH: tests/integration/stepfunctions/v2/choice_operators/test_numeric.py
-          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2' --profile --profile-svg -k 'test_numeric_equals_path'
+          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2' -k 'test_numeric_equals_path'
           COVERAGE_ARGS: -p
         run: |
           mkdir -p out/target/reports
           make test-coverage
+
+          ls -al
       - name: Upload test results
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           name: profile
-          path: /home/runner/_work/localstack/localstack/prof/
+          path: 2023-05-19*
           retention-days: ${{ env.result_retention_days }}
