@@ -154,6 +154,7 @@ jobs:
           TEST_PATH: tests/integration/stepfunctions/v2/
           PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2'
           COVERAGE_ARGS: -p
+          DEBUG: 1
         run: |
           mkdir -p out/target/reports
           make test-coverage
