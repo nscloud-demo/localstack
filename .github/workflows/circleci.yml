@@ -122,20 +122,15 @@ jobs:
           LAMBDA_EXECUTOR: local
           PROVIDER_OVERRIDE_LAMBDA: legacy
           TEST_PATH: ${{ matrix.test_path }}
-          PYTEST_ARGS: --reruns 2 --junitxml=out/target/reports/lambda-docker.xml -o junit_suite_name='legacy-lambda-local'
+          PYTEST_ARGS: --reruns 2 --junitxml=out/target/reports/lambda-docker-${{ runner.name }}.xml -o junit_suite_name='legacy-lambda-local'
           COVERAGE_ARGS: -p
-
-          # TODO: Remove
-          DEBUG: 1
+          COVERAGE_FILE: out/target/coverage/.coverage.lambda-docker.${{ runner.name }}
         run: |
           mkdir -p out/target/reports
+          mkdir -p out/target/coverage
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
-      - name: Store coverage results
-        run: |
-          mkdir -p out/target/coverage
-          mv .coverage.* out/target/coverage/
       - name: Upload test results
         if: success() || failure()
         uses: actions/upload-artifact@v3
@@ -184,17 +179,15 @@ jobs:
         env:
           PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
           TEST_PATH: ${{ matrix.test_path }}
-          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.xml -o junit_suite_name='sfn_v2'
+          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.${{ runner.name }}.xml -o junit_suite_name='sfn_v2'
           COVERAGE_ARGS: -p
+          COVERAGE_FILE: out/target/coverage/.coverage.sfn_v2.${{ runner.name }}
         run: |
           mkdir -p out/target/reports
+          mkdir -p out/target/coverage
           make test-coverage
       # Sadly actions/test-reporter does not support Python yet.
       # Maybe there is a better alternative to `store_test_results`.
-      - name: Store coverage results
-        run: |
-          mkdir -p out/target/coverage
-          mv .coverage.* out/target/coverage/
       - name: Upload test results
         if: success() || failure()
         uses: actions/upload-artifact@v3
