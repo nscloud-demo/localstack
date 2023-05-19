@@ -175,7 +175,7 @@ jobs:
   docker-build:
     strategy:
       matrix:
-        platform: [amd64] # TODO add arm64 when we have such runners.
+        platform: [amd64, arm64]
     runs-on: nscloud-${{ matrix.platform }}
     steps:
       # install
@@ -266,7 +266,7 @@ jobs:
     needs: [docker-build, split-tests]
     strategy:
       matrix:
-        platform: [amd64] # TODO add arm64 when we have such runners.
+        platform: [amd64, arm64]
 
         test_path: ${{fromJson(needs.split-tests.outputs.test_paths)}}
     runs-on: nscloud-${{ matrix.platform }}
