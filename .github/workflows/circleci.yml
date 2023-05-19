@@ -9,7 +9,7 @@ env:
   # TODO: extend duration once workflow is fully migrated
   result_retention_days: 2
   NS_CLOUD_CI_RUNNER: true
-  docker_test_groups: 6
+  docker_test_groups: 4
 
 jobs:
   lint:
@@ -236,12 +236,17 @@ jobs:
         run: |
           shopt -s globstar
 
-          ls tests/integration/**/test_*.py > tests.txt
+          COUNTER=0
+          for f in tests/integration/**/test_*.py
+          do
+            if [[ $COUNTER -ge ${{ env.docker_test_groups }} ]]; then
+              COUNTER=0
+            fi
 
-          LINES=`cat tests.txt | wc -l`
-          echo "found $LINES tests"
+            echo "$f" >> "split_group_$COUNTER"
 
-          split -l $((LINES / ${{ env.docker_test_groups }} + 1)) tests.txt split_group_
+            COUNTER=$((COUNTER+1))
+          done
 
           echo -n "test_paths=[" >> $GITHUB_OUTPUT
 
