@@ -1,5 +1,4 @@
-# Based on .circleci/config.yml
-name: CircleCI Port
+name: Debug
 
 on:
   workflow_dispatch:
