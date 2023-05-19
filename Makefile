@@ -183,7 +183,7 @@ test-coverage:     		  ## Run automated tests and create coverage report
 		DEBUG=$(DEBUG) \
 		LOCALSTACK_INTERNAL_TEST_COLLECT_METRIC=1 \
 		python -m coverage run $(COVERAGE_ARGS) -m \
-		pyinstrument -m pytest --durations=10 --log-cli-level=$(PYTEST_LOGLEVEL) -s $(PYTEST_ARGS) $(TEST_PATH))
+		pyinstrument -r html -o pyinstrument-result.html -m pytest --durations=10 --log-cli-level=$(PYTEST_LOGLEVEL) -s $(PYTEST_ARGS) $(TEST_PATH))
 
 test-docker:
 	DOCKER_FLAGS="--entrypoint= $(DOCKER_FLAGS)" CMD="make test" make docker-run

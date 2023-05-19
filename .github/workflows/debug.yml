@@ -53,5 +53,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: profile
-          path: 2023-05-19*
+          path: pyinstrument-result.html
           retention-days: ${{ env.result_retention_days }}
