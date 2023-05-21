@@ -1290,7 +1290,8 @@ SERVICE_PROVIDER_CONFIG.load_from_environment()
 
 
 def init_directories() -> Directories:
-    if is_in_docker:
+    # TODO: Look into alternative options. NSL-1084
+    if is_in_docker and not is_env_true("NS_CLOUD_CI_RUNNER"):
         return Directories.for_container()
     else:
         if is_env_true("LOCALSTACK_CLI"):
