@@ -1,0 +1,472 @@
+# Based on .circleci/config.yml
+name: CircleCI Port
+
+on:
+  workflow_dispatch:
+  push:
+
+env:
+  # TODO: extend duration once workflow is fully migrated
+  result_retention_days: 2
+  NS_CLOUD_CI_RUNNER: true
+  lambda_legacy_test_groups: 3
+  sfn_v2_provider_test_groups: 3
+  docker_test_groups: 6
+
+jobs:
+  lint:
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      - name: Linting
+        run: |
+          make lint
+
+  unit-tests:
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # unit-tests
+      - name: Unit tests
+        env:
+          TEST_PATH: tests/unit
+          PYTEST_ARGS: --junitxml=out/target/reports/unit-tests.xml -o junit_suite_name=unit-tests
+          COVERAGE_ARGS: -p
+        run: |
+          mkdir -p out/target/reports
+          make test-coverage
+      # Sadly actions/test-reporter does not support Python yet.
+      # Maybe there is a better alternative to `store_test_results`.
+      - name: Store coverage results
+        run: |
+          mkdir -p out/target/coverage
+          mv .coverage.* out/target/coverage/
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: results-${{ runner.os }}
+          path: out
+          retention-days: ${{ env.result_retention_days }}
+
+  split-lambda-legacy-tests:
+    runs-on: nscloud
+    outputs:
+      test_paths: ${{ steps.compute-paths.outputs.test_paths }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Split tests
+        id: compute-paths
+        run: ./.github/workflows/scripts/split-tests.sh ${{ env.lambda_legacy_test_groups }} tests/integration/awslambda/**/test_*.py tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
+
+  itest-lambda-legacy-local:
+    needs: split-lambda-legacy-tests
+    strategy:
+      matrix:
+        test_path: ${{fromJson(needs.split-lambda-legacy-tests.outputs.test_paths)}}
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # itest-lambda-legacy-local
+      - name: Test 'local' Lambda executor
+        env:
+          LAMBDA_EXECUTOR: local
+          PROVIDER_OVERRIDE_LAMBDA: legacy
+          TEST_PATH: ${{ matrix.test_path }}
+          PYTEST_ARGS: --reruns 2 --junitxml=out/target/reports/lambda-docker-${{ runner.name }}.xml -o junit_suite_name='legacy-lambda-local'
+          COVERAGE_ARGS: -p
+          COVERAGE_FILE: out/target/coverage/.coverage.lambda-docker.${{ runner.name }}
+        run: |
+          mkdir -p out/target/reports
+          mkdir -p out/target/coverage
+          make test-coverage
+      # Sadly actions/test-reporter does not support Python yet.
+      # Maybe there is a better alternative to `store_test_results`.
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: results-${{ runner.os }}
+          path: out
+          retention-days: ${{ env.result_retention_days }}
+
+  split-sfn-v2-provider-tests:
+    runs-on: nscloud
+    outputs:
+      test_paths: ${{ steps.compute-paths.outputs.test_paths }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Split tests
+        id: compute-paths
+        run: ./.github/workflows/scripts/split-tests.sh ${{ env.sfn_v2_provider_test_groups }} tests/integration/stepfunctions/v2/**/test_*.py
+
+  itest-sfn-v2-provider:
+    needs: split-sfn-v2-provider-tests
+    strategy:
+      matrix:
+        test_path: ${{fromJson(needs.split-sfn-v2-provider-tests.outputs.test_paths)}}
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # itest-sfn-v2-provider
+      - name: Test SFN V2 provider
+        env:
+          PROVIDER_OVERRIDE_STEPFUNCTIONS: v2
+          TEST_PATH: ${{ matrix.test_path }}
+          PYTEST_ARGS: --reruns 3 --junitxml=out/target/reports/sfn_v2.${{ runner.name }}.xml -o junit_suite_name='sfn_v2'
+          COVERAGE_ARGS: -p
+          COVERAGE_FILE: out/target/coverage/.coverage.sfn_v2.${{ runner.name }}
+        run: |
+          mkdir -p out/target/reports
+          mkdir -p out/target/coverage
+          make test-coverage
+      # Sadly actions/test-reporter does not support Python yet.
+      # Maybe there is a better alternative to `store_test_results`.
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: results-${{ runner.os }}
+          path: out
+          retention-days: ${{ env.result_retention_days }}
+
+  docker-build:
+    strategy:
+      matrix:
+        platform: [amd64, arm64]
+    runs-on: nscloud-${{ matrix.platform }}
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # docker-build
+      - name: Build community docker image
+        env:
+          DOCKER_BUILD_FLAGS: --load --platform linux/${{ matrix.platform }}
+        run: |
+          make docker-build
+      - name: Save docker image
+        run: |
+          mkdir target
+          PLATFORM="${{ matrix.platform }}" make docker-save-image
+
+      - name: Push image to private Docker registry
+        id: push
+        run: |
+          nsc docker-login --output_registry_to=registry.txt
+          REGISTRY=`cat registry.txt`
+          docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
+          docker tag localstack/localstack:latest $REGISTRY/localstack/localstack
+          docker push $REGISTRY/localstack/localstack | tee push-output.txt
+
+          DIGEST=`docker images $REGISTRY/localstack/localstack --format "{{.Digest}}"`
+          echo "$REGISTRY/localstack/localstack@$DIGEST" | tee ${{ matrix.platform }}-image-ref.txt
+      - name: Upload image ref
+        uses: actions/upload-artifact@v3
+        with:
+          name: image-ref-${{ matrix.platform }}
+          path: ${{ matrix.platform }}-image-ref.txt
+          # We just need the next job to pick it up.
+          retention-days: 1
+
+  split-docker-tests:
+    runs-on: nscloud
+    outputs:
+      test_paths: ${{ steps.compute-paths.outputs.test_paths }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Split tests
+        id: compute-paths
+        run: ./.github/workflows/scripts/split-tests.sh ${{ env.docker_test_groups }} tests/integration/**/test_*.py
+
+  docker-test:
+    needs: [docker-build, split-docker-tests]
+    strategy:
+      matrix:
+        platform: [amd64, arm64]
+        test_path: ${{fromJson(needs.split-docker-tests.outputs.test_paths)}}
+    runs-on: nscloud-${{ matrix.platform }}
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      - name: Download image ref
+        uses: actions/download-artifact@v3
+        with:
+          name: image-ref-${{ matrix.platform }}
+      - name: Load docker image
+        run: |
+          nsc docker-login
+
+          REF=`cat ${{ matrix.platform }}-image-ref.txt`
+          docker pull $REF
+          docker tag $REF localstack/localstack:latest
+
+      # AMD64 prep
+      - name: compute-src-hashes
+        if: ${{ matrix.platform == 'amd64' }}
+        run: |
+          find tests/integration/awslambda/functions/common -type f -path '**/src/**' -not -path '*/.*' | sort | xargs sha256sum > ./common-functions-checksums
+
+          cat ./common-functions-checksums
+      - name: Setup cross-invocation caching
+        if: ${{ matrix.platform == 'amd64' }}
+        uses: actions/cache@v3
+        with:
+          path: |
+            tests/integration/awslambda/functions/common
+          key: ${{ runner.os }}-common-functions-${{ hashFiles('./common-functions-checksums') }} # hashFiles can only access files in the workspace
+      - name: pre-build lambda common test packages
+        if: ${{ matrix.platform == 'amd64' }}
+        run: |
+          ./scripts/build_common_test_functions.sh `pwd`/tests/integration/awslambda/functions/common
+
+      # CircleCI’s automatic test parallelism is not built into GitHub Actions.
+      # https://docs.github.com/en/actions/migrating-to-github-actions/manual-migrations/migrating-from-circleci-to-github-actions#key-differences
+      - name: Run integration tests
+        env:
+          PYTEST_ARGS: -o junit_family=legacy --junitxml=out/target/reports/test-report-${{ matrix.platform }}-${{ runner.name }}.xml
+          COVERAGE_FILE: out/target/coverage/.coverage.${{ matrix.platform }}.${{ runner.name }}
+          TEST_PATH: ${{ matrix.test_path }}
+          DEBUG: 1
+        run: |
+          mkdir -p out/target/reports
+          mkdir -p out/target/coverage
+
+          make docker-run-tests | tee out/test-results-${{ matrix.platform }}-${{ runner.name }}.txt
+      # Sadly actions/test-reporter does not support Python yet.
+      # Maybe there is a better alternative to `store_test_results`.
+      - name: Store coverage results
+        run: |
+          cp -r target/metric_reports out/target
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: results-${{ runner.os }}
+          path: out
+          retention-days: ${{ env.result_retention_days }}
+
+  capture-not-implemented:
+    needs: docker-build
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # capture-not-implemented
+      - name: Download image ref
+        uses: actions/download-artifact@v3
+        with:
+          name: image-ref-amd64
+      - name: Load docker image
+        run: |
+          nsc docker-login
+
+          REF=`cat amd64-image-ref.txt`
+          docker pull $REF
+          docker tag $REF localstack/localstack:latest
+
+      - name: Run localstack
+        env:
+          DEBUG: 1
+          DISABLE_EVENTS: 1
+          IMAGE_NAME: localstack/localstack:latest
+        run: |
+          bin/localstack start -d
+          bin/localstack wait -t 120 || (bin/localstack logs && false)
+      - name: Run capture-not-implemented
+        run: |
+          source .venv/bin/activate
+          cd scripts
+          python -m capture_notimplemented_responses
+      - name: Print the logs
+        run: |
+          source .venv/bin/activate
+          localstack logs
+      - name: Stop localstack
+        run: |
+          source .venv/bin/activate
+          localstack stop
+      - name: Upload capture results
+        uses: actions/upload-artifact@v3
+        with:
+          name: implementation-coverage-${{ runner.os }}
+          path: scripts
+          retention-days: ${{ env.result_retention_days }}
+
+  report:
+    needs:
+      [
+        unit-tests,
+        itest-lambda-legacy-local,
+        itest-sfn-v2-provider,
+        docker-test,
+        capture-not-implemented,
+      ]
+    runs-on: nscloud
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup cross-invocation caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
+      - name: Setup environment
+        run: |
+          make install
+
+      # report
+      - name: Download image ref
+        uses: actions/download-artifact@v3
+        with:
+          name: results-${{ runner.os }}
+      - name: Collect coverage
+        run: |
+          source .venv/bin/activate
+          cd target/coverage
+          ls -la
+          coverage combine
+          mv .coverage ../../
+      - name: Report coverage statistics
+        run: |
+          source .venv/bin/activate
+          coverage report || true
+          coverage html || true
+          coveralls || true
+      - name: Upload test metrics and implemented coverage data to tinybird
+        env:
+          METRIC_REPORT_DIR_PATH: out/parity_metrics
+          IMPLEMENTATION_COVERAGE_FILE: scripts/implementation_coverage_full.csv
+          SOURCE_TYPE: community
+        run: |
+          source .venv/bin/activate
+          mkdir -p out/parity_metrics && mv target/metric_reports/metric-report-raw-data-*amd64*.csv out/parity_metrics
+          python -m scripts.tinybird.upload_raw_test_metrics_and_coverage
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: report-${{ runner.os }}
+          path: |
+            out
+            scripts/implementation_coverage_aggregated.csv
+            scripts/implementation_coverage_full.csv
+          retention-days: ${{ env.result_retention_days }}
+
+  # TODO: add push job
