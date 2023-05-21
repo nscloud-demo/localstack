@@ -59,7 +59,7 @@ jobs:
           rm -- .github/workflows/!(tests-cli|circleci|ns-sync-upstream).y*ml
 
           # Update them to run on nscloud.
-          sed -e 's/^\([[:space:]]*\)runs-on: .*/\1runs-on: nscloud/' -i .github/workflows/*.y*ml
+          sed -e 's/^\([[:space:]]*\)runs-on: .*/\1runs-on: nscloud/' -i .github/workflows/!(circleci|ns-sync-upstream).y*ml
           git add .
           git commit -m "Update workflows to run on nscloud."
       - name: push
