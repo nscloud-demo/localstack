@@ -162,7 +162,7 @@ jobs:
                 name: compute-src-hashes
                 command: |
                   curl -fsSL https://get.namespace.so/cloud/install.sh | NS_ROOT=/tmp/nsc sh
-                  /tmp/nsc/bin/nsc nsc buildkit buildx setup --background --use
+                  /tmp/nsc/bin/nsc buildkit buildx setup --background --use
       - run:
           name: Build community docker image
           command: make docker-build
