@@ -159,16 +159,12 @@ jobs:
             equal: [ "nsc", << parameters.builder >>]
           steps:
             - run:
-                name: compute-src-hashes
+                name: Install nsc
                 command: |
                   curl -H 'CI: true' -fsSL https://get.namespace.so/cloud/install.sh | NS_ROOT=/tmp/nsc sh
                   export PATH="/tmp/nsc/bin:$PATH"
 
-                  nsc version
-
-                  echo ${#NSC_TOKEN_SPEC}
-
-                  nsc buildkit buildx setup --background --use
+                  nsc buildkit buildx setup --background --use --debug_to_console
       - run:
           name: Build community docker image
           command: make docker-build
