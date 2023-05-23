@@ -159,21 +159,17 @@ jobs:
             equal: [ "nsc", << parameters.builder >>]
           steps:
             - run:
-                name: Install nsc
+                name: Install nsc remote builder
                 command: |
+                  mkdir -p ~/.docker/cli-plugins
+                  wget -O ~/.docker/cli-plugins/docker-buildx https://github.com/docker/buildx/releases/download/v0.10.4/buildx-v0.10.4.linux-<< parameters.platform >>
+                  chmod +x ~/.docker/cli-plugins/docker-buildx
+
                   curl -H 'CI: true' -fsSL https://get.namespace.so/cloud/install.sh | NS_ROOT=/tmp/nsc sh
                   export PATH="/tmp/nsc/bin:$PATH"
 
-                  nsc buildkit buildx setup --background --use --debug_to_console
+                  nsc buildkit buildx setup --background --use
 
-                  docker buildx ls
-
-                  curl -fsSL -H "Authorization: Bearer $BREAKPOINT_TOKEN" -H "Accept: application/octet-stream" https://api.github.com/repos/namespacelabs/breakpoint/releases/assets/109455480 -o breakpoint.tar.gz
-                  tar -xzf breakpoint.tar.gz
-                  
-                  echo '{"endpoint":"breakpoint.namespace.so:5000","initial_duration":"10m","login_shell":["/bin/bash"],"allowed_ssh_users":["runner"],"github_usernames":["edganiukov","hugosantos","n-g"]}' > config.json
-
-                  ./breakpoint wait --config=config.json
       - run:
           name: Build community docker image
           command: make docker-build
