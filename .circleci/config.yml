@@ -24,8 +24,6 @@ jobs:
       - run:
           name: Install prerequisites
           command: |
-            echo ${#NSC_TOKEN_SPEC}
-
             # fix for: https://discuss.circleci.com/t/heroku-gpg-issues-in-ubuntu-images/43834/3
             sudo rm -rf /etc/apt/sources.list.d/heroku.list
             sudo apt-get update
@@ -395,6 +393,8 @@ workflows:
           builder: nsc
           requires:
             - preflight
+          context: 
+            - nsc-access-token
       - docker-build:
           name: docker-build-nsc-arm64
           platform: arm64
@@ -405,6 +405,8 @@ workflows:
           builder: nsc
           requires:
             - preflight
+          context: 
+            - nsc-access-token
       - docker-build:
           name: docker-build-amd64
           platform: amd64
