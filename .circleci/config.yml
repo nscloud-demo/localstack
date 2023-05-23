@@ -166,7 +166,7 @@ jobs:
 
                   nsc buildkit buildx setup --background --use
 
-                  docker version
+                  ls -al $HOME/.cache/tmp/buildkit/proxy
 
                   docker buildx ls
       - run:
