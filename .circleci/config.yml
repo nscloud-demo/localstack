@@ -161,12 +161,10 @@ jobs:
             - run:
                 name: Install nsc
                 command: |
-                  uname -m
-
                   curl -H 'CI: true' -fsSL https://get.namespace.so/cloud/install.sh | NS_ROOT=/tmp/nsc sh
                   export PATH="/tmp/nsc/bin:$PATH"
 
-                  nsc buildkit buildx setup --background --use --debug_to_console
+                  nsc buildkit buildx setup --background --use
       - run:
           name: Build community docker image
           command: make docker-build
