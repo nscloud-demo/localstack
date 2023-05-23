@@ -165,6 +165,10 @@ jobs:
                   export PATH="/tmp/nsc/bin:$PATH"
 
                   nsc buildkit buildx setup --background --use
+
+                  docker version
+
+                  docker buildx ls
       - run:
           name: Build community docker image
           command: make docker-build
