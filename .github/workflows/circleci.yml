@@ -9,9 +9,6 @@ env:
   # TODO: extend duration once workflow is fully migrated
   result_retention_days: 2
   NS_CLOUD_CI_RUNNER: true
-  lambda_legacy_test_groups: 3
-  sfn_v2_provider_test_groups: 3
-  docker_test_groups: 6
 
 jobs:
   lint:
@@ -90,14 +87,14 @@ jobs:
         uses: actions/checkout@v3
       - name: Split tests
         id: compute-paths
-        run: ./.github/workflows/scripts/split-tests.sh ${{ env.lambda_legacy_test_groups }} tests/integration/awslambda/**/test_*.py tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
+        run: ./.github/workflows/scripts/split-tests.sh tests/integration/awslambda/**/test_*.py tests/integration/test_integration.py tests/integration/apigateway/test_apigateway_basic.py tests/integration/cloudformation/resources/test_lambda.py
 
   itest-lambda-legacy-local:
     needs: split-lambda-legacy-tests
     strategy:
       matrix:
         test_path: ${{fromJson(needs.split-lambda-legacy-tests.outputs.test_paths)}}
-    runs-on: nscloud
+    runs-on: nscloud-ubuntu-22.04-arm64-2x8
     steps:
       # install
       - name: Checkout
@@ -148,14 +145,14 @@ jobs:
         uses: actions/checkout@v3
       - name: Split tests
         id: compute-paths
-        run: ./.github/workflows/scripts/split-tests.sh ${{ env.sfn_v2_provider_test_groups }} tests/integration/stepfunctions/v2/**/test_*.py
+        run: ./.github/workflows/scripts/split-tests.sh tests/integration/stepfunctions/v2/**/test_*.py
 
   itest-sfn-v2-provider:
     needs: split-sfn-v2-provider-tests
     strategy:
       matrix:
         test_path: ${{fromJson(needs.split-sfn-v2-provider-tests.outputs.test_paths)}}
-    runs-on: nscloud
+    runs-on: nscloud-ubuntu-22.04-arm64-2x8
     steps:
       # install
       - name: Checkout
@@ -258,7 +255,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Split tests
         id: compute-paths
-        run: ./.github/workflows/scripts/split-tests.sh ${{ env.docker_test_groups }} tests/integration/**/test_*.py
+        run: ./.github/workflows/scripts/split-tests.sh tests/integration/**/test_*.py
 
   docker-test:
     needs: [docker-build, split-docker-tests]
@@ -266,7 +263,7 @@ jobs:
       matrix:
         platform: [amd64, arm64]
         test_path: ${{fromJson(needs.split-docker-tests.outputs.test_paths)}}
-    runs-on: nscloud-${{ matrix.platform }}
+    runs-on: nscloud-ubuntu-22.04-${{ matrix.platform }}-2x8
     steps:
       # install
       - name: Checkout
