@@ -233,7 +233,7 @@ jobs:
       - name: Push image to private Docker registry
         id: push
         run: |
-          nsc docker-login --output_registry_to=registry.txt
+          nsc docker login --output_registry_to=registry.txt
           REGISTRY=`cat registry.txt`
           docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
           docker tag localstack/localstack:latest $REGISTRY/localstack/localstack
@@ -291,7 +291,7 @@ jobs:
           name: image-ref-${{ matrix.platform }}
       - name: Load docker image
         run: |
-          nsc docker-login
+          nsc docker login
 
           REF=`cat ${{ matrix.platform }}-image-ref.txt`
           docker pull $REF
@@ -370,7 +370,7 @@ jobs:
           name: image-ref-amd64
       - name: Load docker image
         run: |
-          nsc docker-login
+          nsc docker login
 
           REF=`cat amd64-image-ref.txt`
           docker pull $REF
