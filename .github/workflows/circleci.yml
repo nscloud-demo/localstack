@@ -4,7 +4,8 @@ name: CircleCI Port
 on:
   workflow_dispatch:
   push:
-
+    branches-ignore: patches
+    
 env:
   # TODO: extend duration once workflow is fully migrated
   result_retention_days: 2

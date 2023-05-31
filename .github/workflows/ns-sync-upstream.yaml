@@ -54,14 +54,11 @@ jobs:
           git reset --hard patches
       - name: update workflows
         run: |
-          # Only tests-cli/circleci workflows have non-trivial tests.
           shopt -s extglob
-          rm -- .github/workflows/!(tests-cli|circleci|ns-sync-upstream).y*ml
+          rm -- .github/workflows/!(circleci|ns-sync-upstream).y*ml
 
-          # Update them to run on nscloud.
-          sed -e 's/^\([[:space:]]*\)runs-on: .*/\1runs-on: nscloud/' -i .github/workflows/!(circleci|ns-sync-upstream).y*ml
           git add .
-          git commit -m "Update workflows to run on nscloud."
+          git commit -m "Skip original workflows."
       - name: push
         run: |
           # Push separately to trigger workflows on main.
