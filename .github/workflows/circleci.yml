@@ -323,10 +323,6 @@ jobs:
           make install
 
       # capture-not-implemented
-      - name: Download image ref
-        uses: actions/download-artifact@v3
-        with:
-          name: image-ref-amd64
       - name: Load docker image
         run: |
           nsc docker login --output_registry_to=registry.txt
