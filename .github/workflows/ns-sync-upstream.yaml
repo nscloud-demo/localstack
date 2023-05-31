@@ -55,7 +55,7 @@ jobs:
       - name: update workflows
         run: |
           shopt -s extglob
-          rm -- .github/workflows/!(circleci|ns-sync-upstream).y*ml
+          find . -name .github/workflows/!(circleci|ns-sync-upstream).y*ml -type f -delete
 
           git add .
           git commit -m "Skip original workflows."
