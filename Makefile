@@ -81,7 +81,6 @@ TAG ?= $(IMAGE_NAME)
 DOCKER_BUILD_FLAGS ?= "--load"
 DOCKERFILE ?= "./Dockerfile"
 docker-build: 			  ## Build Docker image
-	echo $(TAG)
 	# start build
 	# --add-host: Fix for Centos host OS
 	# --build-arg BUILDKIT_INLINE_CACHE=1: Instruct buildkit to inline the caching information into the image
