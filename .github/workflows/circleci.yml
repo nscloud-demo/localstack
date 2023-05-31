@@ -194,10 +194,7 @@ jobs:
           retention-days: ${{ env.result_retention_days }}
 
   docker-build:
-    strategy:
-      matrix:
-        platform: [amd64, arm64]
-    runs-on: nscloud-${{ matrix.platform }}
+    runs-on: nscloud-ubuntu-22.04-amd64-2x8 
     steps:
       # install
       - name: Checkout
@@ -219,32 +216,12 @@ jobs:
       # docker-build
       - name: Build community docker image
         env:
-          DOCKER_BUILD_FLAGS: --load --platform linux/${{ matrix.platform }}
-        run: |
-          make docker-build
-      - name: Save docker image
-        run: |
-          mkdir target
-          PLATFORM="${{ matrix.platform }}" make docker-save-image
-
-      - name: Push image to private Docker registry
-        id: push
+          DOCKER_BUILD_FLAGS: --push --platform linux/amd64,linux/arm64
         run: |
           nsc docker login --output_registry_to=registry.txt
-          REGISTRY=`cat registry.txt`
-          docker load -i target/localstack-docker-image-${{ matrix.platform }}.tar
-          docker tag localstack/localstack:latest $REGISTRY/localstack/localstack
-          docker push $REGISTRY/localstack/localstack | tee push-output.txt
+          TAG=$(cat registry.txt)/localstack/localstack:$(git rev-parse --short HEAD)
 
-          DIGEST=`docker images $REGISTRY/localstack/localstack --format "{{.Digest}}"`
-          echo "$REGISTRY/localstack/localstack@$DIGEST" | tee ${{ matrix.platform }}-image-ref.txt
-      - name: Upload image ref
-        uses: actions/upload-artifact@v3
-        with:
-          name: image-ref-${{ matrix.platform }}
-          path: ${{ matrix.platform }}-image-ref.txt
-          # We just need the next job to pick it up.
-          retention-days: 1
+          make docker-build
 
   split-docker-tests:
     runs-on: nscloud
@@ -272,25 +249,12 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - name: Setup cross-invocation caching
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ hashFiles('setup.cfg') }}
-      - name: Setup environment
-        run: |
-          make install
 
-      - name: Download image ref
-        uses: actions/download-artifact@v3
-        with:
-          name: image-ref-${{ matrix.platform }}
       - name: Load docker image
         run: |
-          nsc docker login
+          nsc docker login --output_registry_to=registry.txt
+          REF=$(cat registry.txt)/localstack/localstack:$(git rev-parse --short HEAD)
 
-          REF=`cat ${{ matrix.platform }}-image-ref.txt`
           docker pull $REF
           docker tag $REF localstack/localstack:latest
 
@@ -367,9 +331,9 @@ jobs:
           name: image-ref-amd64
       - name: Load docker image
         run: |
-          nsc docker login
-
-          REF=`cat amd64-image-ref.txt`
+          nsc docker login --output_registry_to=registry.txt
+          REF=$(cat registry.txt)/localstack/localstack:$(git rev-parse --short HEAD)
+          
           docker pull $REF
           docker tag $REF localstack/localstack:latest
 
