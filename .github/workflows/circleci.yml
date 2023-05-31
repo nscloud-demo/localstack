@@ -12,7 +12,7 @@ env:
 
 jobs:
   lint:
-    runs-on: nscloud
+    runs-on: nscloud-ubuntu-22.04-amd64-2x8
     steps:
       # install
       - name: Checkout
@@ -79,7 +79,7 @@ jobs:
           retention-days: ${{ env.result_retention_days }}
 
   split-lambda-legacy-tests:
-    runs-on: nscloud
+    runs-on: nscloud-ubuntu-22.04-amd64-2x8
     outputs:
       test_paths: ${{ steps.compute-paths.outputs.test_paths }}
     steps:
@@ -94,7 +94,7 @@ jobs:
     strategy:
       matrix:
         test_path: ${{fromJson(needs.split-lambda-legacy-tests.outputs.test_paths)}}
-    runs-on: nscloud-ubuntu-22.04-arm64-2x8
+    runs-on: nscloud-ubuntu-22.04-amd64-2x8
     steps:
       # install
       - name: Checkout
@@ -137,7 +137,7 @@ jobs:
           retention-days: ${{ env.result_retention_days }}
 
   split-sfn-v2-provider-tests:
-    runs-on: nscloud
+    runs-on: nscloud-ubuntu-22.04-amd64-2x8
     outputs:
       test_paths: ${{ steps.compute-paths.outputs.test_paths }}
     steps:
@@ -152,7 +152,7 @@ jobs:
     strategy:
       matrix:
         test_path: ${{fromJson(needs.split-sfn-v2-provider-tests.outputs.test_paths)}}
-    runs-on: nscloud-ubuntu-22.04-arm64-2x8
+    runs-on: nscloud-ubuntu-22.04-amd64-2x8
     steps:
       # install
       - name: Checkout
@@ -303,7 +303,7 @@ jobs:
 
   capture-not-implemented:
     needs: docker-build
-    runs-on: nscloud
+    runs-on: nscloud-ubuntu-22.04-amd64-2x8
     steps:
       # install
       - name: Checkout
