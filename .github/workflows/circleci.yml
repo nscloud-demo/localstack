@@ -221,6 +221,7 @@ jobs:
           nsc docker login --output_registry_to=registry.txt
           TAG=$(cat registry.txt)/localstack/localstack:$(git rev-parse --short HEAD)
 
+          echo $TAG
           make docker-build
 
   split-docker-tests:
@@ -333,7 +334,7 @@ jobs:
         run: |
           nsc docker login --output_registry_to=registry.txt
           REF=$(cat registry.txt)/localstack/localstack:$(git rev-parse --short HEAD)
-          
+
           docker pull $REF
           docker tag $REF localstack/localstack:latest
 
