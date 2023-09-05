@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches-ignore: patches
-    
+
 env:
   # TODO: extend duration once workflow is fully migrated
   result_retention_days: 2
@@ -14,6 +14,7 @@ env:
 jobs:
   lint:
     runs-on: nscloud-ubuntu-22.04-amd64-2x8
+    timeout-minutes: 30
     steps:
       # install
       - name: Checkout
@@ -38,6 +39,7 @@ jobs:
 
   unit-tests:
     runs-on: nscloud
+    timeout-minutes: 30
     steps:
       # install
       - name: Checkout
@@ -81,6 +83,7 @@ jobs:
 
   split-lambda-legacy-tests:
     runs-on: nscloud-ubuntu-22.04-amd64-2x8
+    timeout-minutes: 30
     outputs:
       test_paths: ${{ steps.compute-paths.outputs.test_paths }}
     steps:
@@ -96,6 +99,7 @@ jobs:
       matrix:
         test_path: ${{fromJson(needs.split-lambda-legacy-tests.outputs.test_paths)}}
     runs-on: nscloud-ubuntu-22.04-amd64-2x8
+    timeout-minutes: 30
     steps:
       # install
       - name: Checkout
@@ -139,6 +143,7 @@ jobs:
 
   split-sfn-v2-provider-tests:
     runs-on: nscloud-ubuntu-22.04-amd64-2x8
+    timeout-minutes: 30
     outputs:
       test_paths: ${{ steps.compute-paths.outputs.test_paths }}
     steps:
@@ -154,6 +159,7 @@ jobs:
       matrix:
         test_path: ${{fromJson(needs.split-sfn-v2-provider-tests.outputs.test_paths)}}
     runs-on: nscloud-ubuntu-22.04-amd64-2x8
+    timeout-minutes: 30
     steps:
       # install
       - name: Checkout
@@ -195,7 +201,8 @@ jobs:
           retention-days: ${{ env.result_retention_days }}
 
   docker-build:
-    runs-on: nscloud-ubuntu-22.04-amd64-2x8 
+    runs-on: nscloud-ubuntu-22.04-amd64-2x8
+    timeout-minutes: 30
     steps:
       # install
       - name: Checkout
@@ -224,6 +231,7 @@ jobs:
 
   split-docker-tests:
     runs-on: nscloud
+    timeout-minutes: 30
     outputs:
       test_paths: ${{ steps.compute-paths.outputs.test_paths }}
     steps:
@@ -240,6 +248,7 @@ jobs:
         platform: [amd64, arm64]
         test_path: ${{fromJson(needs.split-docker-tests.outputs.test_paths)}}
     runs-on: nscloud-ubuntu-22.04-${{ matrix.platform }}-2x8
+    timeout-minutes: 30
     steps:
       # install
       - name: Checkout
@@ -370,6 +379,7 @@ jobs:
         capture-not-implemented,
       ]
     runs-on: nscloud
+    timeout-minutes: 30
     steps:
       # install
       - name: Checkout
