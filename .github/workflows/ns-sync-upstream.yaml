@@ -12,8 +12,9 @@ name: ns-sync-upstream
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "30 2 * * *" # daily at 2:30am
+  # Disabled regular sync for now
+  # schedule:
+  #   - cron: "30 2 * * *" # daily at 2:30am
 
 env:
   main_branch: master
