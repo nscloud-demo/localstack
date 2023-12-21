@@ -1,0 +1,26 @@
+name: Namespace Python Cache
+
+on:
+  workflow_dispatch:
+
+jobs:
+  python-install:
+    runs-on: namespace-profile-amd64-with-caching
+    steps:
+      # install
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          
+      - name: Setup cross-invocation caching
+        uses: namespacelabs/nscloud-cache-action@HEAD
+        with:
+          cache: python
+          
+      - name: Setup environment
+        run: |
+          make install
